@@ -72,7 +72,8 @@ class Proyecto:
     alto: Optional[float] = None
     espesor_cm: Optional[float] = None
     uso: Optional[str] = None
-    tipo_obra: Optional[str] = None
+    tipo_obra: Optional[str] = None  # piso / losa / muro
+
 
 # ==========================================================
 # IA – EXTRACCIÓN SEGURA
@@ -158,7 +159,15 @@ if entrada:
     st.session_state.memoria.update({k: v for k, v in nuevos.items() if v is not None})
 
     proyecto = Proyecto(**st.session_state.memoria)
-    faltantes = [k for k, v in asdict(proyecto).items() if v is None]
+    # Validación inteligente según tipo de obra
+if proyecto.tipo_obra in ["piso", "losa"]:
+    requeridos = ["largo", "ancho", "espesor_cm"]
+elif proyecto.tipo_obra == "muro":
+    requeridos = ["largo", "alto", "espesor_cm"]
+else:
+    requeridos = []
+
+faltantes = [k for k in requeridos if getattr(proyecto, k) is None]
 
     if faltantes:
         st.warning(f"Faltan datos: {', '.join(faltantes)}")
