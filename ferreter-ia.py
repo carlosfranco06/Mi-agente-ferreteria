@@ -159,15 +159,16 @@ if entrada:
     st.session_state.memoria.update({k: v for k, v in nuevos.items() if v is not None})
 
     proyecto = Proyecto(**st.session_state.memoria)
-    # Validación inteligente según tipo de obra
-if proyecto.tipo_obra in ["piso", "losa"]:
-    requeridos = ["largo", "ancho", "espesor_cm"]
-elif proyecto.tipo_obra == "muro":
-    requeridos = ["largo", "alto", "espesor_cm"]
-else:
-    requeridos = []
 
-faltantes = [k for k in requeridos if getattr(proyecto, k) is None]
+    # ================= VALIDACIÓN POR TIPO DE OBRA =================
+    if proyecto.tipo_obra in ["piso", "losa"]:
+        requeridos = ["largo", "ancho", "espesor_cm"]
+    elif proyecto.tipo_obra == "muro":
+        requeridos = ["largo", "alto", "espesor_cm"]
+    else:
+        requeridos = []
+
+    faltantes = [k for k in requeridos if getattr(proyecto, k) is None]
 
     if faltantes:
         st.warning(f"Faltan datos: {', '.join(faltantes)}")
