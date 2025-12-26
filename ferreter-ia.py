@@ -1,14 +1,15 @@
 # ==========================================================
-# FERRETERÍA IA PRO+++ – VERSIÓN ESTABLE STREAMLIT CLOUD
+# FERRETERÍA IA PRO+++ – VERSIÓN FINAL ESTABLE
 # ==========================================================
 
 import streamlit as st
 import json
 import math
 from typing import Optional, Dict
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 from groq import Groq
 import pandas as pd
+from io import BytesIO
 
 # ==========================================================
 # CONFIGURACIÓN GENERAL
@@ -79,12 +80,12 @@ class Proyecto:
 def extraer_datos_ia(texto: str) -> Dict:
     prompt = f"""
     Eres un ingeniero civil.
-    Extrae SOLO datos explícitos.
-    NO infieras nada.
+    Extrae SOLO datos explícitos del texto.
+    NO infieras ni inventes valores.
 
     Devuelve JSON con:
     largo, ancho, alto, espesor_cm, uso, tipo_obra.
-    Usa null si un dato no aparece.
+    Usa null si un dato no está presente.
 
     Texto: {texto}
     """
@@ -108,7 +109,7 @@ PRECIOS = {
 }
 
 if st.session_state.usuario["rol"] == "admin":
-    st.subheader("Gestión de precios")
+    st.subheader("⚙️ Gestión de precios")
     for k in PRECIOS:
         PRECIOS[k] = st.number_input(k, value=PRECIOS[k])
 
@@ -119,6 +120,7 @@ def calcular_concreto(p: Proyecto) -> Dict:
     norm = NORMATIVAS[pais]
 
     volumen = p.largo * p.ancho * (p.espesor_cm / 100)
+
     sacos_m3 = {
         "ligero": 6.5,
         "estructural": 8,
@@ -138,12 +140,12 @@ def calcular_concreto(p: Proyecto) -> Dict:
     )
 
     return {
-        "volumen_m3": round(volumen, 2),
-        "cemento_sacos": sacos,
-        "arena_m3": round(arena, 2),
-        "grava_m3": round(grava, 2),
-        "acero_kg": round(acero, 1),
-        "total_estimado": round(total, 2),
+        "Volumen (m3)": round(volumen, 2),
+        "Cemento (sacos)": sacos,
+        "Arena (m3)": round(arena, 2),
+        "Grava (m3)": round(grava, 2),
+        "Acero (kg)": round(acero, 1),
+        "Total estimado": round(total, 2),
     }
 
 # ==========================================================
@@ -172,21 +174,52 @@ if entrada:
     else:
         requeridos = []
 
-    faltantes = [
-        k for k in requeridos if getattr(proyecto, k) is None
-    ]
+    faltantes = [k for k in requeridos if getattr(proyecto, k) is None]
 
     if faltantes:
-        st.warning(f"Faltan datos: {', '.join(faltantes)}")
+        st.warning(f"Faltan datos para continuar: {', '.join(faltantes)}")
     else:
         resultado = calcular_concreto(proyecto)
-        st.success("Presupuesto generado")
-        st.json(resultado)
 
-        if st.button("Exportar a Excel"):
-            df = pd.DataFrame(
-                resultado.items(),
-                columns=["Concepto", "Valor"]
-            )
-            df.to_excel("presupuesto.xlsx", index=False)
-            st.success("Archivo Excel generado correctamente")
+        st.success("✅ Presupuesto generado")
+
+        # ---------------------------
+        # TABLA EN PANTALLA
+        # ---------------------------
+        df = pd.DataFrame(
+            resultado.items(),
+            columns=["Concepto", "Valor"]
+        )
+
+        st.subheader("📋 Detalle del presupuesto")
+        st.table(df)
+
+        # ---------------------------
+        # WHATSAPP
+        # ---------------------------
+        mensaje_wp = (
+            "🏗️ Presupuesto de obra\n\n" +
+            "\n".join([f"- {k}: {v}" for k, v in resultado.items()])
+        )
+
+        url_wp = (
+            "https://wa.me/?text=" +
+            mensaje_wp.replace(" ", "%20").replace("\n", "%0A")
+        )
+
+        st.markdown(f"📲 [Enviar por WhatsApp]({url_wp})")
+
+        # ---------------------------
+        # EXCEL DESCARGABLE
+        # ---------------------------
+        buffer = BytesIO()
+
+        with pd.ExcelWriter(buffer, engine="xlsxwriter") as writer:
+            df.to_excel(writer, index=False, sheet_name="Presupuesto")
+
+        st.download_button(
+            label="⬇️ Descargar presupuesto en Excel",
+            data=buffer.getvalue(),
+            file_name="presupuesto_obra.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
