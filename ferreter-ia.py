@@ -1,5 +1,5 @@
 # ==========================================================
-# FERRETERÍA IA PRO+++ – VERSIÓN FINAL ESTABLE
+# FERRETERÍA IA PRO+++ – UI PROFESIONAL (SIN JSON)
 # ==========================================================
 
 import streamlit as st
@@ -80,12 +80,12 @@ class Proyecto:
 def extraer_datos_ia(texto: str) -> Dict:
     prompt = f"""
     Eres un ingeniero civil.
-    Extrae SOLO datos explícitos del texto.
-    NO infieras ni inventes valores.
+    Extrae SOLO datos explícitos.
+    NO infieras valores.
 
     Devuelve JSON con:
     largo, ancho, alto, espesor_cm, uso, tipo_obra.
-    Usa null si un dato no está presente.
+    Usa null si un dato no aparece.
 
     Texto: {texto}
     """
@@ -140,12 +140,12 @@ def calcular_concreto(p: Proyecto) -> Dict:
     )
 
     return {
-        "Volumen (m3)": round(volumen, 2),
+        "Volumen (m³)": round(volumen, 2),
         "Cemento (sacos)": sacos,
-        "Arena (m3)": round(arena, 2),
-        "Grava (m3)": round(grava, 2),
+        "Arena (m³)": round(arena, 2),
+        "Grava (m³)": round(grava, 2),
         "Acero (kg)": round(acero, 1),
-        "Total estimado": round(total, 2),
+        "Total estimado ($)": round(total, 2),
     }
 
 # ==========================================================
@@ -183,20 +183,29 @@ if entrada:
 
         st.success("✅ Presupuesto generado")
 
-        # ---------------------------
-        # TABLA EN PANTALLA
-        # ---------------------------
+        # ==================================================
+        # MÉTRICAS PRINCIPALES (TARJETAS)
+        # ==================================================
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Volumen", f"{resultado['Volumen (m³)']} m³")
+        c2.metric("Cemento", f"{resultado['Cemento (sacos)']} sacos")
+        c3.metric("Total", f"${resultado['Total estimado ($)']}")
+
+        # ==================================================
+        # TABLA DETALLADA
+        # ==================================================
+        st.subheader("📋 Detalle del presupuesto")
+
         df = pd.DataFrame(
             resultado.items(),
-            columns=["Concepto", "Valor"]
+            columns=["Concepto", "Cantidad"]
         )
 
-        st.subheader("📋 Detalle del presupuesto")
         st.table(df)
 
-        # ---------------------------
+        # ==================================================
         # WHATSAPP
-        # ---------------------------
+        # ==================================================
         mensaje_wp = (
             "🏗️ Presupuesto de obra\n\n" +
             "\n".join([f"- {k}: {v}" for k, v in resultado.items()])
@@ -207,13 +216,12 @@ if entrada:
             mensaje_wp.replace(" ", "%20").replace("\n", "%0A")
         )
 
-        st.markdown(f"📲 [Enviar por WhatsApp]({url_wp})")
+        st.markdown(f"📲 [Enviar presupuesto por WhatsApp]({url_wp})")
 
-        # ---------------------------
+        # ==================================================
         # EXCEL DESCARGABLE
-        # ---------------------------
+        # ==================================================
         buffer = BytesIO()
-
         with pd.ExcelWriter(buffer, engine="xlsxwriter") as writer:
             df.to_excel(writer, index=False, sheet_name="Presupuesto")
 
